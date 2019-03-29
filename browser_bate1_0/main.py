@@ -6,12 +6,12 @@ __author__ = 'RollingBear'
 
 from PyQt5.QtWidgets import QApplication
 
-import sys
+from browser_bate1_0.ui import main_window
 
-import browser_bate1_0.ui
+import sys
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ui = browser_bate1_0.ui.main_window()
+    ui = main_window(init_url='https://www.qq.com', label='HomePage')
     ui.show()
     sys.exit(app.exec_())

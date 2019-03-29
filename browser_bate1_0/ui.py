@@ -6,14 +6,19 @@ __author__ = 'RollingBear'
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QUrl, QSize
-from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QToolBar, QAction, QLineEdit, QTabWidget
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWidgets import QMainWindow, QDesktopWidget, QToolBar, QAction, QLineEdit, QTabWidget, QMessageBox
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
+
+from win32api import GetSystemMetrics
 
 
 class main_window(QMainWindow):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, init_url='about:blank', label='blank'):
+        super().__init__()
+
+        self.url = init_url
+        self.label = label
 
         self.setWindowTitle('PyQt Browser bate1.0')
         self.setWindowIcon(QIcon('icons/penguin.png'))
@@ -29,7 +34,8 @@ class main_window(QMainWindow):
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
 
-        self.add_new_tab(QUrl('https://www.baidu.com'), 'HomePage')
+        self.add_new_tab(qurl=QUrl(self.url), label=self.label)
+        self.tabs.currentWidget().page().loadStarted.connect(lambda: self.linkClicked('www.baidu.com'))
 
         self.setCentralWidget(self.tabs)
 
@@ -58,7 +64,11 @@ class main_window(QMainWindow):
         navigation_bar.addSeparator()
         navigation_bar.addWidget(self.url_bar)
 
+        self.resize(int(GetSystemMetrics(0) * 0.8), int(GetSystemMetrics(1) * 0.8))
         self.center()
+
+    def linkClicked(self, url):
+        self.add_new_tab(QUrl(url))
 
     def navigate_to_url(self):
         q = QUrl(self.url_bar.text())
@@ -82,8 +92,7 @@ class main_window(QMainWindow):
         self.tabs.setCurrentIndex(i)
 
         browser.urlChanged.connect(lambda qurl, browser=browser: self.renew_urlbar(qurl, browser))
-        # browser.loadFinished.connect(
-        #     lambda i=i, browser=browser: self.tabs.setTabText(i, browser.page().mainFrame().title()))
+        browser.loadFinished.connect(lambda: self.tabs.setTabText(i, browser.page().title()))
 
     def tab_open_doubleclick(self, i):
 
@@ -100,12 +109,16 @@ class main_window(QMainWindow):
         self.tabs.removeTab(i)
 
     def center(self):
-        '''
-        Set the window center of screen
-        :return: None
-        '''
-
         geomotry = self.frameGeometry()
         center_point = QDesktopWidget().availableGeometry().center()
         geomotry.moveCenter(center_point)
         self.move(geomotry.topLeft())
+
+    def closeEvent(self, QCloseEvent):
+        reply = QMessageBox.question(self, 'Message', 'Are you sure to quit?',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            QCloseEvent.accept()
+        else:
+            QCloseEvent.ignore()
