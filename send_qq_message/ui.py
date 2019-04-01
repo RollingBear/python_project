@@ -6,6 +6,7 @@ __author__ = 'RollingBear'
 
 from PyQt5.QtWidgets import QWidget, QDesktopWidget, QMessageBox, QLabel, QLineEdit, QGridLayout, QPushButton
 from PyQt5.QtWidgets import QInputDialog, QRadioButton
+from PyQt5.QtGui import QPixmap
 from time import sleep
 
 from send_qq_message.config import config
@@ -41,7 +42,7 @@ class main_window(QWidget):
         self.widget_set.addWidget(self.target_label, 0, 1)
 
         self.target_name = QLineEdit(self)
-        self.target_name.setPlaceholderText('Input your target window name')
+        self.target_name.setPlaceholderText('Target window name')
         self.widget_set.addWidget(self.target_name, 1, 1)
         self.target_name.textChanged[str].connect(self.target_change)
         self.lock_btn = QPushButton('Lock Target', self)
@@ -95,6 +96,10 @@ class main_window(QWidget):
         self.widget_set.addWidget(self.stop_btn, 6, 3)
         self.stop_btn.clicked.connect(self.stop)
 
+        self.pic_label = QLabel(self)
+        self.pic_label.setPixmap(QPixmap('pic.jpg'))
+        self.widget_set.addWidget(self.pic_label, 0, 3, 5, 1)
+
         self.enable_all(False)
 
     def target_change(self, text):
@@ -144,6 +149,7 @@ class main_window(QWidget):
             self.mode_random_btn.setChecked(False)
             self.mode_sequential_btn.setChecked(False)
 
+            self.interval_modify_btn.setEnabled(True)
             self.rand_msg_list_modify_btn.setEnabled(False)
             self.sequ_msg_list_modify_btn.setEnabled(False)
             self.message.setEnabled(True)
@@ -157,6 +163,7 @@ class main_window(QWidget):
             self.mode_simple_btn.setChecked(False)
             self.mode_sequential_btn.setChecked(False)
 
+            self.interval_modify_btn.setEnabled(True)
             self.rand_msg_list_modify_btn.setEnabled(True)
             self.sequ_msg_list_modify_btn.setEnabled(False)
             self.message.setEnabled(False)
@@ -170,6 +177,7 @@ class main_window(QWidget):
             self.mode_simple_btn.setChecked(False)
             self.mode_random_btn.setChecked(False)
 
+            self.interval_modify_btn.setEnabled(True)
             self.rand_msg_list_modify_btn.setEnabled(False)
             self.sequ_msg_list_modify_btn.setEnabled(True)
             self.message.setEnabled(False)

@@ -97,7 +97,7 @@ class send_msg():
         while count <= self.max_count:
             sleep(self.interval)
 
-            rand = randint(0, len(self.msg_list))
+            rand = randint(0, len(self.rand_msg_list))
 
             w32cb.OpenClipboard()
             w32cb.EmptyClipboard()
