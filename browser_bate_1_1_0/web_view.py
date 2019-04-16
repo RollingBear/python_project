@@ -4,9 +4,8 @@
 
 __author__ = 'RollingBear'
 
-import sys
 from PyQt5.QtCore import pyqtSlot, QUrl, QEvent, Qt, QObject
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QCompleter
+from PyQt5.QtWidgets import QMainWindow, QMessageBox, QCompleter
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
 from browser_bate_1_1_0.ui import ui_main_window
@@ -52,8 +51,8 @@ class web_view(QMainWindow, ui_main_window):
         self.view = NewWebView(self)
         self.view.load(QUrl("https://www.baidu.com"))
         self.newTab(self.view)
-        self.lineEdit.installEventFilter(self)
-        self.lineEdit.setMouseTracking(True)
+        self.line_edit.installEventFilter(self)
+        self.line_edit.setMouseTracking(True)
         settings = QWebEngineSettings.defaultSettings()
         settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
         # settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
@@ -62,7 +61,7 @@ class web_view(QMainWindow, ui_main_window):
     def getModel(self):
         self.m_model = QStandardItemModel(0, 1, self)
         m_completer = QCompleter(self.m_model, self)
-        self.lineEdit.setCompleter(m_completer)
+        self.line_edit.setCompleter(m_completer)
         m_completer.activated[str].connect(self.onUrlChoosed)
 
     def newTab(self, view):
@@ -76,12 +75,12 @@ class web_view(QMainWindow, ui_main_window):
         view.page().linkHovered.connect(self.showUrl)
         currentUrl = self.getUrl(view)
 
-        self.lineEdit.setText(currentUrl)
+        self.line_edit.setText(currentUrl)
         self.tabWidget.addTab(view, "New Page")
         self.tabWidget.setCurrentWidget(view)
 
-    def getUrl(self, webview):
-        url = webview.url().toString()
+    def getUrl(self, web_view):
+        url = web_view.url().toString()
         return url
 
     def closeTab(self, index):
@@ -97,13 +96,14 @@ class web_view(QMainWindow, ui_main_window):
         currentView = self.tabWidget.widget(index)
         if currentView:
             currentViewUrl = self.getUrl(currentView)
-            self.lineEdit.setText(currentViewUrl)
+            self.line_edit.setText(currentViewUrl)
 
     def closeEvent(self, event):
         tabNum = self.tabWidget.count()
         closeInfo = "You have open {} pages，are you sure to close browser？".format(tabNum)
         if tabNum > 1:
-            r = QMessageBox.question(self, "Close Browser", closeInfo, QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
+            r = QMessageBox.question(self, "Close Browser", closeInfo, QMessageBox.Ok | QMessageBox.Cancel,
+                                     QMessageBox.Cancel)
             if r == QMessageBox.Ok:
                 event.accept()
             elif r == QMessageBox.Cancel:
@@ -112,7 +112,7 @@ class web_view(QMainWindow, ui_main_window):
             event.accept()
 
     def eventFilter(self, object, event):
-        if object == self.lineEdit:
+        if object == self.line_edit:
             if event.type() == QEvent.MouseButtonRelease:
                 self.lineEdit.selectAll()
             elif event.type() == QEvent.KeyPress:
@@ -141,7 +141,7 @@ class web_view(QMainWindow, ui_main_window):
             self.progressBar.setValue(0)
 
     def webHistory(self, url):
-        self.lineEdit.setText(url.toString())
+        self.line_edit.setText(url.toString())
         index = self.tabWidget.currentIndex()
         currentView = self.tabWidget.currentWidget()
         history = currentView.history()
@@ -218,7 +218,7 @@ class web_view(QMainWindow, ui_main_window):
         """
         Slot documentation goes here.
         """
-        url = self.lineEdit.text()
+        url = self.line_edit.text()
         if url[0:7] == "http://" or url[0:8] == "https://":
             qurl = QUrl(url)
         else:
@@ -240,10 +240,3 @@ class web_view(QMainWindow, ui_main_window):
 
     def __del__(self):
         self.view.deleteLater()
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    wv = web_view()
-    wv.show()
-    sys.exit(app.exec_())
