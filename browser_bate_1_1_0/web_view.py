@@ -5,243 +5,245 @@
 __author__ = 'RollingBear'
 
 import sys
-
 from PyQt5.QtCore import pyqtSlot, QUrl, QEvent, Qt, QObject
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QCompleter
 from PyQt5.QtGui import QStandardItemModel
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
-from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QTabWidget, QMessageBox, QWidget, QVBoxLayout, QCompleter
-
-from browser_bate_1_1_0.ui import ui
+from browser_bate_1_1_0.ui import ui_main_window
 
 
-class new_web_view(QWebEngineView):
-
-    def __init__(self, tab_widget):
+class NewWebView(QWebEngineView):
+    def __init__(self, tabWidget):
         super().__init__()
+        self.tabWidget = tabWidget
 
-        self.tab_widget = tab_widget
-
-    def createWindow(self, QWebEnginePage_WebWindowType):
-        created_web = new_web_view(self.tab_widget)
-        self.tab_widget.newTab(created_web)
-        return created_web
+    def createWindow(self, WebWindowType):
+        new_webview = NewWebView(self.tabWidget)
+        self.tabWidget.newTab(new_webview)
+        return new_webview
 
 
-class web_view(QMainWindow, ui):
+class web_view(QMainWindow, ui_main_window):
+    """
+    Class documentation goes here.
+    """
 
     def __init__(self, parent=None):
+        """
+        Constructor
 
+        @param parent reference to the parent widget
+        @type QWidget
+        """
         super(web_view, self).__init__(parent)
+        self.setupUi(self)
+        self.initUi()
 
-        self.ui(self)
-        self.init_ui()
+    def initUi(self):
 
-    def init_ui(self):
-
-        self.progress_bar.hide()
-
-        # set the window full window when open the program
+        self.progressBar.hide()
         # self.showMaximized()
-
-        self.tab_widget.tabCloseRequested.connect(self.close_tab)
-        self.tab_widget.currentChanged.connect(self.tab_change)
-
-        self.view = new_web_view(self)
-        self.view.load(QUrl('https://www.baidu.com'))
-
-        self.new_tab(self.view)
-
-        self.url_line_edit.installEventFilter(self)
-        self.url_line_edit.setMouseTracking(True)
-
+        # self.tabWidget.setTabShape(QTabWidget.Triangular)
+        # self.tabWidget.setDocumentMode(True)
+        # self.tabWidget.setMovable(True)
+        # self.tabWidget.setTabsClosable(True)
+        self.tabWidget.tabCloseRequested.connect(self.closeTab)
+        self.tabWidget.currentChanged.connect(self.tabChange)
+        self.view = NewWebView(self)
+        self.view.load(QUrl("https://www.baidu.com"))
+        self.newTab(self.view)
+        self.lineEdit.installEventFilter(self)
+        self.lineEdit.setMouseTracking(True)
         settings = QWebEngineSettings.defaultSettings()
         settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
+        # settings.setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+        self.getModel()
 
-        self.get_model()
-
-    def get_model(self):
-
+    def getModel(self):
         self.m_model = QStandardItemModel(0, 1, self)
         m_completer = QCompleter(self.m_model, self)
-        self.url_line_edit.setCompleter(m_completer)
+        self.lineEdit.setCompleter(m_completer)
         m_completer.activated[str].connect(self.onUrlChoosed)
 
-    def new_tab(self, view):
+    def newTab(self, view):
+        self.forward_button.setEnabled(False)
+        self.back_button.setEnabled(False)
+        view.titleChanged.connect(self.webTitle)
+        view.iconChanged.connect(self.webIcon)
+        view.loadProgress.connect(self.webProgress)
+        view.loadFinished.connect(self.webProgressEnd)
+        view.urlChanged.connect(self.webHistory)
+        view.page().linkHovered.connect(self.showUrl)
+        currentUrl = self.getUrl(view)
 
-        self.forward_btn.setEnabled(False)
-        self.back_btn.setEnabled(False)
-        view.titleChanged.connect(self.web_title)
-        view.iconChanged.connect(self.web_icon)
-        view.loadProgress.connect(self.web_progress)
-        view.loadFinished.connect(self.web_progress_end)
-        view.urlChanged.connect(self.web_history)
-        view.page().linkHovered.connect(self.show_url)
-        current_url = self.get_url(view)
+        self.lineEdit.setText(currentUrl)
+        self.tabWidget.addTab(view, "New Page")
+        self.tabWidget.setCurrentWidget(view)
 
-        self.url_line_edit.setText(current_url)
-        self.tab_widget.addTab(view, 'New Tab Page')
-        self.tab_widget.setCurrentWidget(view)
-
-    def get_url(self, web_view):
-
-        url = web_view.url().toString()
+    def getUrl(self, webview):
+        url = webview.url().toString()
         return url
 
-    def close_tab(self, index):
+    def closeTab(self, index):
+        if self.tabWidget.count() > 1:
+            self.tabWidget.widget(index).deleteLater()
+            self.tabWidget.removeTab(index)
+        elif self.tabWidget.count() == 1:
+            self.tabWidget.removeTab(0)
+            self.on_new_button_clicked()
 
-        if self.tab_widget.count() > 1:
-            self.tab_widget.widget(index).deleteLater()
-            self.tab_widget.removeTab(index)
-        elif self.tab_widget.count() == 1:
-            self.tab_widget.removeTab(0)
-            self.onNewButtonClicked()
+    def tabChange(self, index):
 
-    def tab_changed(self, index):
-
-        current_view = self.tab_widget.widget(index)
-        if current_view:
-            current_view_url = self.get_url(current_view)
-            self.url_line_edit.setText(current_view_url)
+        currentView = self.tabWidget.widget(index)
+        if currentView:
+            currentViewUrl = self.getUrl(currentView)
+            self.lineEdit.setText(currentViewUrl)
 
     def closeEvent(self, event):
-        tab_num = self.tab_widget.count()
-        close_info = 'You have open {} pages, are you sure to close this pages?'.format(tab_num)
-
-        if tab_num > 1:
-            result = QMessageBox.question(self, 'Close browser', close_info, QMessageBox.Ok | QMessageBox.Cancel,
-                                          QMessageBox.Cancel)
-
-            if result == QMessageBox.Ok:
+        tabNum = self.tabWidget.count()
+        closeInfo = "You have open {} pages，are you sure to close browser？".format(tabNum)
+        if tabNum > 1:
+            r = QMessageBox.question(self, "Close Browser", closeInfo, QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel)
+            if r == QMessageBox.Ok:
                 event.accept()
-            elif result == QMessageBox.Cancel:
+            elif r == QMessageBox.Cancel:
                 event.ignore()
         else:
             event.accept()
 
     def eventFilter(self, object, event):
-
-        if object == self.url_line_edit:
+        if object == self.lineEdit:
             if event.type() == QEvent.MouseButtonRelease:
-                self.url_line_edit.selectAll()
+                self.lineEdit.selectAll()
             elif event.type() == QEvent.KeyPress:
                 if event.key() == Qt.Key_Return:
-                    self.onGoButtonClicked()
+                    self.on_go_button_clicked()
         return QObject.eventFilter(self, object, event)
 
-    def web_title(self, title):
-
-        index = self.tab_widget.currentIndex()
-
+    def webTitle(self, title):
+        index = self.tabWidget.currentIndex()
         if len(title) > 16:
-            title = title[0: 17]
-        self.tab_widget.setTabText(index, title)
+            title = title[0:17]
+        self.tabWidget.setTabText(index, title)
 
-    def web_icon(self, icon):
+    def webIcon(self, icon):
+        index = self.tabWidget.currentIndex()
+        self.tabWidget.setTabIcon(index, icon)
 
-        index = self.tab_widget.currentIndex()
-        self.tab_widget.setTabIcon(index, icon)
+    def webProgress(self, progress):
+        self.progressBar.show()
+        self.progressBar.setValue(progress)
 
-    def web_progress(self, progress):
+    def webProgressEnd(self, isFinished):
+        if isFinished:
+            self.progressBar.setValue(100)
+            self.progressBar.hide()
+            self.progressBar.setValue(0)
 
-        self.progress_bar.show()
-        self.progress_bar.setValue(progress)
-
-    def web_progress_end(self, is_finished):
-
-        if is_finished:
-            self.progress_bar.setValue(100)
-            self.progress_bar.hide()
-            self.progress_bar.setValue(0)
-
-    def web_history(self, url):
-        self.url_line_edit.setText(url.toString())
-        index = self.tab_widget.currentIndex()
-        current_view = self.tab_widget.currentWidget()
-        history = current_view.history()
-
+    def webHistory(self, url):
+        self.lineEdit.setText(url.toString())
+        index = self.tabWidget.currentIndex()
+        currentView = self.tabWidget.currentWidget()
+        history = currentView.history()
         if history.count() > 1:
             if history.currentItemIndex() == history.count() - 1:
-                self.back_btn.setEnabled(True)
-                self.forward_btn.setEnabled(False)
+                self.back_button.setEnabled(True)
+                self.forward_button.setEnabled(False)
             elif history.currentItemIndex() == 0:
-                self.back_btn.setEnabled(False)
-                self.forward_btn.setEnabled(True)
+                self.back_button.setEnabled(False)
+                self.forward_button.setEnabled(True)
             else:
-                self.back_btn.setEnabled(True)
-                self.forward_btn.setEnabled(True)
+                self.back_button.setEnabled(True)
+                self.forward_button.setEnabled(True)
 
-    def show_url(self, url):
-
-        self.status_bar.showMessage(url)
+    def showUrl(self, url):
+        self.statusBar.showMessage(url)
 
     def onUrlChoosed(self, url):
-
-        self.url_line_edit.setText(url)
+        self.lineEdit.setText(url)
 
     @pyqtSlot(str)
     def on_lineEdit_textChanged(self, text):
 
-        url_group = text.split('.')
+        urlGroup = text.split(".")
 
-        if len(url_group) == 3 and url_group[-1]:
+        if len(urlGroup) == 3 and urlGroup[-1]:
             return
-        elif len(url_group) == 3 and not (url_group[-1]):
-            www_list = ['com', 'cn', 'net', 'org', 'gov', 'cc']
+        elif len(urlGroup) == 3 and not (urlGroup[-1]):
+            wwwList = ["com", "cn", "net", "org", "gov", "cc"]
             self.m_model.removeRows(0, self.m_model.rowCount())
-
-            for i in range(0, len(www_list)):
+            for i in range(0, len(wwwList)):
                 self.m_model.insertRow(0)
-                self.m_model.setData(self.m_model.index(0, 0), text + www_list[i])
+                self.m_model.setData(self.m_model.index(0, 0), text + wwwList[i])
 
     @pyqtSlot()
-    def onNewButtonClicked(self):
-
-        new_view = new_web_view(self)
-        self.new_tab(new_view)
-        new_view.load(QUrl(''))
-
-    @pyqtSlot()
-    def onForwardButtonClicked(self):
-
-        self.tab_widget.currentWidget().forward()
+    def on_new_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        newView = NewWebView(self)
+        self.newTab(newView)
+        newView.load(QUrl(""))
 
     @pyqtSlot()
-    def onBackButtonClicked(self):
-
-        self.tab_widget.currentWidget().back()
-
-    @pyqtSlot()
-    def onRefreshButtonClicked(self):
-
-        self.tab_widget.currentWidget().reload()
+    def on_forward_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        self.tabWidget.currentWidget().forward()
 
     @pyqtSlot()
-    def onStopButtonClicked(self):
-
-        self.tab_widget.currentWidget().stop()
+    def on_back_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        self.tabWidget.currentWidget().back()
 
     @pyqtSlot()
-    def onGoButtonClicked(self):
-        url = self.url_line_edit.text()
+    def on_refresh_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        self.tabWidget.currentWidget().reload()
 
-        if url[0:7] == 'http://' or url[0:8] == 'https://':
+    @pyqtSlot()
+    def on_stop_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        self.tabWidget.currentWidget().stop()
+
+    @pyqtSlot()
+    def on_go_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        url = self.lineEdit.text()
+        if url[0:7] == "http://" or url[0:8] == "https://":
             qurl = QUrl(url)
         else:
-            qurl = QUrl('http://' + url)
-        self.tab_widget.currentWidget().load(qurl)
+            qurl = QUrl("http://" + url)
+        self.tabWidget.currentWidget().load(qurl)
 
     @pyqtSlot()
-    def onHomeButtonClicked(self):
-
-        home_url = QUrl('https://www.baidu.com')
-
-        if self.tab_widget.currentWidget().title() == 'about:blank':
-            self.tab_widget.currentWidget().load(home_url)
+    def on_home_button_clicked(self):
+        """
+        Slot documentation goes here.
+        """
+        homeurl = QUrl("http://www.baidu.com")
+        if self.tabWidget.currentWidget().title() == "about:blank":
+            self.tabWidget.currentWidget().load(homeurl)
         else:
-            new_view = new_web_view(self)
-            self.new_tab(new_view)
-            new_view.load(home_url)
+            newView = NewWebView(self)
+            self.newTab(newView)
+            newView.load(homeurl)
 
     def __del__(self):
         self.view.deleteLater()
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    wv = web_view()
+    wv.show()
+    sys.exit(app.exec_())
