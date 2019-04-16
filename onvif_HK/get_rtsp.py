@@ -30,6 +30,8 @@ def get_rtsp(ip, port, username, password):
     uri = media_service.GetStreamUri(
         {'StreamSetup': {'Stream': 'RTP_unicast', 'Transport': {'Protocol': 'RTSP'}}, 'ProfileToken': token})
 
+    print(uri)
+
     url = add_message_with_uri(uri['Uri'], username, password)
 
     return url

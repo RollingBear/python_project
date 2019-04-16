@@ -8,6 +8,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import traceback
 import time
+import json
 from gevent import monkey
 
 monkey.patch_all()
@@ -38,6 +39,10 @@ XMAX = 1
 XMIN = -1
 YMAX = 1
 YMIN = -1
+ZMAX = 1
+ZMIN = -1
+FMAX = 1
+FMIN = -1
 
 
 # 摄像头控制
@@ -82,43 +87,182 @@ def move_left(ptz, request, timeout=1):
     perform_move(ptz, request, timeout)
 
 
+# 摄像头右上转
+def move_right_up(ptz, request, timeout=1):
+    print('move rightup...')
+    request.Velocity.PanTilt._x = XMAX
+    request.Velocity.PanTilt._y = YMAX
+    perform_move(ptz, request, timeout)
+
+
+# 摄像头左上转
+def move_left_up(ptz, request, timeout=1):
+    print('move leftup...')
+    request.Velocity.PanTilt._x = XMIN
+    request.Velocity.PanTilt._y = YMAX
+    perform_move(ptz, request, timeout)
+
+
+# 摄像头右上转
+def move_right_down(ptz, request, timeout=1):
+    print('move rightdown...')
+    request.Velocity.PanTilt._x = XMAX
+    request.Velocity.PanTilt._y = YMIN
+    perform_move(ptz, request, timeout)
+
+
+# 摄像头左上转
+def move_left_down(ptz, request, timeout=1):
+    print('move leftdown...')
+    request.Velocity.PanTilt._x = XMIN
+    request.Velocity.PanTilt._y = YMIN
+    perform_move(ptz, request, timeout)
+
+
+# 摄像头调焦拉近
+def move_zoomin(ptz, request, timeout=1):
+    print('move Zoomin...')
+    request.Velocity.Zoom._x = ZMAX
+    perform_move(ptz, request, timeout)
+
+
+# 摄像头调焦拉远
+def move_zoomout(ptz, request, timeout=1):
+    print('move Zoomout...')
+    request.Velocity.Zoom._x = ZMIN
+    perform_move(ptz, request, timeout)
+
+
+# 摄像头图像控制
+def img_move(img, request, timeout):
+    # Start continuous move
+    img.Move(request)
+    # Wait a certain time
+    time.sleep(timeout)
+    # Stop continuous move
+    img.Stop({'VideoSourceToken ': request.VideoSourceToken})
+
+
+# 摄像头聚焦拉近
+def move_focusin(img, request, timeout=1):
+    print('move focusin...')
+    request.Focus.Continuous._x = XMAX
+    img_move(img, request, timeout)
+
+
+# 摄像头聚焦拉远
+def move_focusout(img, request, timeout=1):
+    print('move focusout...')
+    request.Focus.Continuous._x = XMIN
+    img_move(img, request, timeout)
+
+
+# 摄像头光圈放大
+def move_irisin(img, request, timeout=1):
+    print('move irisin...')
+    request.Focus.Continuous._x = XMAX
+    img_move(img, request, timeout)
+
+
+# 摄像头光圈缩小
+def move_irisout(img, request, timeout=1):
+    print('move irisout...')
+    request.Focus.Continuous._x = XMIN
+    img_move(img, request, timeout)
+
+
 # 摄像头控制
 def continuous_move(action, ip, port, username, password):
-    mycam = ONVIFCamera(ip, port, username, password)
-    # Create media service object
-    media = mycam.create_media_service()
-    # Create ptz service object
-    ptz = mycam.create_ptz_service()
+    try:
+        mycam = ONVIFCamera(ip, port, username, password)
+        # Create media service object
+        media = mycam.create_media_service()
+        # Create ptz service object
+        ptz = mycam.create_ptz_service()
 
-    # Get target profile
-    media_profile = media.GetProfiles()[0]
+        # Get target profile
+        media_profile = media.GetProfiles()[0]
 
-    # Get PTZ configuration options for getting continuous move range
-    request = ptz.create_type('GetConfigurationOptions')
-    request.ConfigurationToken = media_profile.PTZConfiguration.token
-    ptz_configuration_options = ptz.GetConfigurationOptions(request)
+        # Get PTZ configuration options for getting continuous move range
+        request = ptz.create_type('GetConfigurationOptions')
+        request.ConfigurationToken = media_profile.PTZConfiguration.token
+        ptz_configuration_options = ptz.GetConfigurationOptions(request)
 
-    request = ptz.create_type('ContinuousMove')
-    request.ProfileToken = media_profile.token
+        request = ptz.create_type('ContinuousMove')
+        request.ProfileToken = media_profile.token
 
-    ptz.Stop({'ProfileToken': media_profile.token})
+        ptz.Stop({'ProfileToken': media_profile.token})
 
-    # Get range of pan and tilt
-    # NOTE: X and Y are velocity vector
-    global XMAX, XMIN, YMAX, YMIN
-    XMAX = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].XRange.Max
-    XMIN = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].XRange.Min
-    YMAX = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].YRange.Max
-    YMIN = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].YRange.Min
+        # Get range of pan and tilt
+        # NOTE: X and Y are velocity vector
+        global XMAX, XMIN, YMAX, YMIN, ZMAX, ZMIN
+        XMAX = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].XRange.Max
+        XMIN = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].XRange.Min
+        YMAX = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].YRange.Max
+        YMIN = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].YRange.Min
+        ZMAX = ptz_configuration_options.Spaces.ContinuousZoomVelocitySpace[0].XRange.Min
+        ZMIN = ptz_configuration_options.Spaces.ContinuousZoomVelocitySpace[0].XRange.Min
 
-    if action == 'up':
-        move_up(ptz, request)
-    elif action == 'down':
-        move_down(ptz, request)
-    elif action == 'left':
-        move_left(ptz, request)
-    elif action == 'right':
-        move_right(ptz, request)
+        if action == 'up':
+            move_up(ptz, request)
+        elif action == 'down':
+            move_down(ptz, request)
+        elif action == 'left':
+            move_left(ptz, request)
+        elif action == 'right':
+            move_right(ptz, request)
+        return True
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        return False
+
+
+# 摄像头控制(未完成)
+def continuous_imgae_move(action, ip, port, username, password):
+    try:
+        mycam = ONVIFCamera(ip, port, username, password)
+        # Create media service object
+        media = mycam.create_imaging_service()
+        # Create ptz service object
+        imaging = mycam.create_imaging_service()
+
+        # Get target profile
+        media_profile = media.GetProfiles()[0]
+
+        # Get PTZ configuration options for getting continuous move range
+        request = imaging.create_type('GetMoveOptions')
+        request.ConfigurationToken = media_profile.VideoSourceConfiguration.token
+        imaging_configuration_options = imaging.GetMoveOptions(request)
+
+        request = imaging.create_type('Move')
+        request.VideoSourceToken = media_profile.VideoSourceConfiguration.token
+
+        imaging.Stop({'VideoSourceToken ': media_profile.VideoSourceConfiguration.token})
+
+        # Get range of pan and tilt
+        # NOTE: X and Y are velocity vector
+        global FMAX, FMIN
+        FMAX = imaging_configuration_options.Continuous.Speed[0].Max
+        FMIN = imaging_configuration_options.Continuous.Speed[0].Min
+
+        if action == 'up':
+            move_up(imaging, request)
+        elif action == 'down':
+            move_down(imaging, request)
+        elif action == 'left':
+            move_left(imaging, request)
+        elif action == 'right':
+            move_right(imaging, request)
+        return True
+    except Exception as e:
+        logger.error(traceback.format_exc())
+        return False
+
+
+# 生成带验证的rtsp地址
+def make_uri_withauth(uri, username, password):
+    newuri = uri[:7] + str(username) + ':' + str(password) + '@' + uri[7:]
+    return newuri
 
 
 @app.route('/getrtspurl', method='POST')
@@ -126,7 +270,7 @@ def getrtspurl():
     """
         接收参数：json格式
         POST
-        {'ip': '', 'port': '', 'username': '', 'password': '', 'action': ''}
+        {'ip': '', 'port': '', 'username': '', 'password': '','is_auth':''}
         :return:
     """
     try:
@@ -136,15 +280,22 @@ def getrtspurl():
         port = int(data['port'])
         username = data['username']
         password = data['password']
+        is_auth = data['is_auth']
         mycam = ONVIFCamera(ip, port, username, password)
         media_service = mycam.create_media_service()
         profiles = media_service.GetProfiles()
         token = profiles[2].token
         uri = media_service.GetStreamUri(
             {'StreamSetup': {'Stream': 'RTP_unicast', 'Transport': {'Protocol': 'RTSP'}}, 'ProfileToken': token})
-        print(uri)
+        # print(uri)
+        if is_auth:
+            rtspurl = make_uri_withauth(uri, username, password)
+        else:
+            rtspurl = uri
+        return json.dumps({'rtspurl': rtspurl})
     except Exception as e:
         logger.error(traceback.format_exc())
+        return json.dumps({'rtspurl': 'error'})
 
 
 @app.route('/cameracontrol', method='POST')
@@ -162,9 +313,11 @@ def cameracontrol():
         username = data['username']
         password = data['password']
         action = data['action']
-        continuous_move(action, ip, port, username, password)
+        res = continuous_move(action, ip, port, username, password)
+        return json.dumps({'res': res})
     except Exception as e:
         logger.error(traceback.format_exc())
+        return json.dumps({'res': "error"})
 
 
 def start():
@@ -173,3 +326,7 @@ def start():
                # host="0.0.0.0",
                host="127.0.0.1",
                port=9898, reloader=True, debug=True)
+
+
+if __name__ == "__main__":
+    start()
