@@ -230,13 +230,13 @@ class web_view(QMainWindow, ui_main_window):
         """
         Slot documentation goes here.
         """
-        homeurl = QUrl("http://www.baidu.com")
+        home_url = QUrl("http://www.baidu.com")
         if self.tabWidget.currentWidget().title() == "about:blank":
-            self.tabWidget.currentWidget().load(homeurl)
+            self.tabWidget.currentWidget().load(home_url)
         else:
             newView = NewWebView(self)
             self.newTab(newView)
-            newView.load(homeurl)
+            newView.load(home_url)
 
     def __del__(self):
         self.view.deleteLater()
