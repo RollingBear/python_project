@@ -13,17 +13,17 @@ from gevent import monkey
 
 monkey.patch_all()
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                    stream=sys.stdout)
-
-# 定义按文件大小切割日志
-logger = logging.getLogger()
-Rthandler = RotatingFileHandler(sys.path[0] + '/log.log', maxBytes=10, backupCount=5)
-Rthandler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
-Rthandler.setFormatter(formatter)
-logger.addHandler(Rthandler)
+# logging.basicConfig(level=logging.INFO,
+#                     format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+#                     stream=sys.stdout)
+#
+# # 定义按文件大小切割日志
+# logger = logging.getLogger()
+# Rthandler = RotatingFileHandler(sys.path[0] + '/log.log', maxBytes=10, backupCount=5)
+# Rthandler.setLevel(logging.INFO)
+# formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
+# Rthandler.setFormatter(formatter)
+# logger.addHandler(Rthandler)
 
 app = bottle.Bottle()
 bottle.BaseRequest.MEMFILE_MAX = 10 * 1024 * 1024  #
@@ -43,6 +43,8 @@ ZMAX = 1
 ZMIN = -1
 FMAX = 1
 FMIN = -1
+
+control_dict = {'PanTilt': {'_x': 0.00, '_y': 0.00}, 'Zoom': {'_x': 0.00}}
 
 
 # 摄像头控制
@@ -186,10 +188,17 @@ def continuous_move(action, ip, port, username, password):
         # Get PTZ configuration options for getting continuous move range
         request = ptz.create_type('GetConfigurationOptions')
         request.ConfigurationToken = media_profile.PTZConfiguration.token
+        print(request)
         ptz_configuration_options = ptz.GetConfigurationOptions(request)
 
         request = ptz.create_type('ContinuousMove')
         request.ProfileToken = media_profile.token
+        # request.Velocity = control_dict
+        # request_ptz.Velocity = media_profile
+        # print(media_profile)
+        print(request)
+        # print()
+        # print(request_ptz)
 
         ptz.Stop({'ProfileToken': media_profile.token})
 
@@ -200,7 +209,7 @@ def continuous_move(action, ip, port, username, password):
         XMIN = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].XRange.Min
         YMAX = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].YRange.Max
         YMIN = ptz_configuration_options.Spaces.ContinuousPanTiltVelocitySpace[0].YRange.Min
-        ZMAX = ptz_configuration_options.Spaces.ContinuousZoomVelocitySpace[0].XRange.Man
+        ZMAX = ptz_configuration_options.Spaces.ContinuousZoomVelocitySpace[0].XRange.Max
         ZMIN = ptz_configuration_options.Spaces.ContinuousZoomVelocitySpace[0].XRange.Min
 
         if action == 'up':
@@ -213,7 +222,8 @@ def continuous_move(action, ip, port, username, password):
             move_right(ptz, request)
         return True
     except Exception as e:
-        logger.error(traceback.format_exc())
+        # logger.error(traceback.format_exc())
+        logging.info(traceback.format_exc())
         return False
 
 
@@ -247,7 +257,8 @@ def continuous_scene(action, ip, port, username, password):
 
         return True
     except:
-        logger.error(traceback.format_exc())
+        # logger.error(traceback.format_exc())
+        logging.info(traceback.format_exc())
         return False
 
 
@@ -289,7 +300,8 @@ def continuous_imgae_move(action, ip, port, username, password):
             move_right(imaging, request)
         return True
     except Exception as e:
-        logger.error(traceback.format_exc())
+        # logger.error(traceback.format_exc())
+        logging.info(traceback.format_exc())
         return False
 
 
@@ -318,17 +330,18 @@ def getrtspurl():
         mycam = ONVIFCamera(ip, port, username, password)
         media_service = mycam.create_media_service()
         profiles = media_service.GetProfiles()
-        token = profiles[2].token
+        token = profiles[0].token
         uri = media_service.GetStreamUri(
             {'StreamSetup': {'Stream': 'RTP_unicast', 'Transport': {'Protocol': 'RTSP'}}, 'ProfileToken': token})
         # print(uri)
         if is_auth:
-            rtspurl = make_uri_withauth(uri, username, password)
+            rtspurl = make_uri_withauth(uri['Uri'], username, password)
         else:
             rtspurl = uri
         return json.dumps({'rtspurl': rtspurl})
     except Exception as e:
-        logger.error(traceback.format_exc())
+        # logger.error(traceback.format_exc())
+        logging.info(traceback.format_exc())
         return json.dumps({'rtspurl': 'error'})
 
 
@@ -350,7 +363,8 @@ def cameracontrol():
         res = continuous_move(action, ip, port, username, password)
         return json.dumps({'res': res})
     except Exception as e:
-        logger.error(traceback.format_exc())
+        # logger.error(traceback.format_exc())
+        logging.info(traceback.format_exc())
         return json.dumps({'res': "error"})
 
 

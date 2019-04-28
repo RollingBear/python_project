@@ -52,6 +52,7 @@ url = get_rtsp('192.168.81.11', 80, 'admin', 'admin123456')
 # print(url)
 
 cap = cv2.VideoCapture(url)
+# cap = cv2.VideoCapture('rtsp://192.168.81.220:554/cam/realmonitor?channel=1&amp;subtype=0&amp;unicast=true&amp;proto=Onvif')
 
 while (True):
     ret, frame = cap.read()
@@ -59,7 +60,7 @@ while (True):
     # print(frame)
     cv2.imshow('frame', frame)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(0) == 27:
         break
 
 
