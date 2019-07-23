@@ -188,15 +188,18 @@ def continuous_move(action, ip, port, username, password):
         # Get PTZ configuration options for getting continuous move range
         request = ptz.create_type('GetConfigurationOptions')
         request.ConfigurationToken = media_profile.PTZConfiguration.token
-        print(request)
         ptz_configuration_options = ptz.GetConfigurationOptions(request)
+
+        print(ptz_configuration_options)
+
+        # print('Service Capabilities: ', ptz.GetServiceCapabilities()['_attr_1'])
+        # print('result move: ', ptz.GetStatus())
 
         request = ptz.create_type('ContinuousMove')
         request.ProfileToken = media_profile.token
         # request.Velocity = control_dict
         # request_ptz.Velocity = media_profile
         # print(media_profile)
-        print(request)
         # print()
         # print(request_ptz)
 
