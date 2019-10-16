@@ -47,7 +47,7 @@ from onvif_HK.get_rtsp import get_rtsp
 # print(uri)
 # url = make_uri_withauth(uri['Uri'], 'admin', 'admin123456')
 
-url = get_rtsp('192.168.81.11', 80, 'admin', 'admin123456')
+url = get_rtsp('192.168.81.206', 80, 'admin', 'admin123')
 
 # print(url)
 
